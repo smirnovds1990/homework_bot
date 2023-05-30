@@ -1,5 +1,7 @@
 import logging
 import os
+from pprint import pprint
+import requests
 import sys
 import time
 import telegram
@@ -19,7 +21,7 @@ tokens = {
 practicum_token = os.getenv('PRACTICUM_TOKEN')
 telegram_token = os.getenv('TELEGRAM_TOKEN')
 telegram_chat_id = os.getenv('TELEGRAM_CHAT_ID')
-payload = {'from_date': 0}
+timestamp = {'from_date': 1682802000}
 endpoint = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 headers = {'Authorization': f'OAuth {practicum_token}'}
 homework_verdicts = {
@@ -36,6 +38,7 @@ logging.basicConfig(
         '- %(funcName)s - %(lineno)s'
     ),
     level=logging.DEBUG,
+    encoding='UTF-8'
 )
 handler = StreamHandler(stream=sys.stdout)
 handler.setLevel(logging.DEBUG)
@@ -53,9 +56,10 @@ logging.getLogger('').addHandler(handler)
 
 
 def check_tokens():
+    """Проверь наличие обязательных токенов."""
     for key, value in tokens.items():
         if not value:
-            print(f'Отсутствует обязательная переменная {key}.')
+            logging.critical(f'Отсутствует обязательная переменная {key}.')
         continue
 
 
@@ -64,7 +68,12 @@ def send_message(bot, message):
 
 
 def get_api_answer(timestamp):
-    ...
+    """Сделай запрос к API и верни ответ приведенный к данным Python."""
+    try:
+        response = requests.get(endpoint, headers=headers, params=timestamp)
+    except Exception as error:
+        return logging.error(f'Ошибка при запросе к API: {error}')
+    pprint(response.json())
 
 
 def check_response(response):
@@ -80,7 +89,7 @@ def parse_status(homework):
 def main():
     """Основная логика работы бота."""
     check_tokens()
-    ...
+    get_api_answer(timestamp)
 
 #     bot = telegram.Bot(token=telegram_token)
 #     timestamp = int(time.time())
