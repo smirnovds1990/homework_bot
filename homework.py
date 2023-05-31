@@ -9,6 +9,10 @@ from logging import StreamHandler
 
 from dotenv import load_dotenv
 
+from exceptions import (
+    ParseStatusException, WrongStatusCodeException, WrongKeyException
+)
+
 load_dotenv()
 
 RETRY_PERIOD = 600
@@ -20,7 +24,6 @@ tokens = {
 PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-PAYLOAD = {'from_date': 1682802000}
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 HOMEWORK_VERDICTS = {
@@ -54,7 +57,6 @@ def check_tokens():
     for key, value in tokens.items():
         if not value:
             logging.critical(f'Отсутствует обязательная переменная {key}.')
-        continue
 
 
 def send_message(bot, message):
@@ -70,8 +72,10 @@ def get_api_answer(timestamp):
     """Сделай запрос к API и верни ответ приведенный к данным Python."""
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=timestamp)
-    except Exception as error:
-        return logging.error(f'Ошибка при запросе к API: {error}')
+    except requests.RequestException as error:
+        print(f'Ошибка при запросе к API: {error}')
+    if response.status_code != 200:
+        raise WrongStatusCodeException('Ошибка при запросе к API')
     return response.json()
 
 
@@ -82,7 +86,7 @@ def check_response(response):
     homework_info = response['homeworks']
     for key in response.keys():
         if key not in EXPECTED_KEYS:
-            logging.error(f'Нет обязательного ключа {key}')
+            raise WrongKeyException(f'Нет обязательного ключа {key}')
     for item in homework_info:
         if item['status'] not in EXPECTED_HOMEWORK_STATUSES:
             logging.error('Неизвестный статус')
@@ -93,6 +97,10 @@ def parse_status(homework):
     """Извлеки статус домашней работы, верни сообщение для отправки."""
     homework_name = homework['homework_name']
     homework_status = homework['status']
+    if not homework_name:
+        raise ParseStatusException('Отсутствует ключ "homework_name"')
+    if homework_status not in HOMEWORK_VERDICTS:
+        raise ParseStatusException('Отсутствует статус домашней работы')
     verdict = HOMEWORK_VERDICTS[homework_status]
     return (
         f'Изменился статус проверки работы "{homework_name}". '
@@ -103,14 +111,16 @@ def parse_status(homework):
 def main():
     """Основная логика работы бота."""
     check_tokens()
-    response = get_api_answer(PAYLOAD)
+    bot = telegram.Bot(token=TELEGRAM_TOKEN)
+    timestamp = {'from_date': 0}
+    response = get_api_answer(timestamp)
     homework = check_response(response)
     message = parse_status(homework)
-    bot = telegram.Bot(token=TELEGRAM_TOKEN)
     send_message(bot, message)
+    time.sleep(RETRY_PERIOD)
+    timestamp = {'from_date': response['current_date']}
     while True:
         try:
-            time.sleep(RETRY_PERIOD)
             main()
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
