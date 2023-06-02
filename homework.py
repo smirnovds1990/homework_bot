@@ -88,7 +88,7 @@ def check_response(response):
         homework_info = response['homeworks']
     else:
         raise NoKeyException('Отсутствует ключ "homeworks"')
-    if type(response['homeworks']) != type(list):
+    if not isinstance(response['homeworks'], list):
         raise TypeError('Неправильный формат ответа.')
     EXPECTED_HOMEWORK_STATUSES = ['reviewing', 'approved', 'rejected']
     for item in homework_info:
