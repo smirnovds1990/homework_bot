@@ -10,7 +10,7 @@ class ParseStatusException(Exception):
     pass
 
 
-class WrongKeyException(Exception):
+class NoKeyException(Exception):
     """Исключение при отсутствии ключа 'homeworks'."""
 
     pass

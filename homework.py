@@ -10,7 +10,7 @@ from logging import StreamHandler
 from dotenv import load_dotenv
 
 from exceptions import (
-    ParseStatusException, WrongStatusCodeException, WrongKeyException
+    NoKeyException, ParseStatusException, WrongStatusCodeException,
 )
 
 load_dotenv()
@@ -57,6 +57,7 @@ def check_tokens():
     for key, value in tokens.items():
         if not value:
             logging.critical(f'Отсутствует обязательная переменная {key}.')
+            break
 
 
 def send_message(bot, message):
@@ -81,12 +82,15 @@ def get_api_answer(timestamp):
 
 def check_response(response):
     """Проверь ответ API на соответствие документации."""
-    EXPECTED_KEYS = ['homeworks', 'current_date']
+    if type(response) != type(dict):
+        raise TypeError('Неправильный формат ответа. Нужен словарь.')
+    if 'homeworks' in response.keys():
+        homework_info = response['homeworks']
+    else:
+        raise NoKeyException('Отсутствует ключ "homeworks"')
+    if type(response['homeworks']) != type(list):
+        raise TypeError('Неправильный формат ответа.')
     EXPECTED_HOMEWORK_STATUSES = ['reviewing', 'approved', 'rejected']
-    homework_info = response['homeworks']
-    for key in response.keys():
-        if key not in EXPECTED_KEYS:
-            raise WrongKeyException(f'Нет обязательного ключа {key}')
     for item in homework_info:
         if item['status'] not in EXPECTED_HOMEWORK_STATUSES:
             logging.error('Неизвестный статус')
@@ -95,10 +99,10 @@ def check_response(response):
 
 def parse_status(homework):
     """Извлеки статус домашней работы, верни сообщение для отправки."""
+    if 'homework_name' not in homework.keys():
+        raise ParseStatusException('Отсутствует ключ "homework_name"')
     homework_name = homework['homework_name']
     homework_status = homework['status']
-    if not homework_name:
-        raise ParseStatusException('Отсутствует ключ "homework_name"')
     if homework_status not in HOMEWORK_VERDICTS:
         raise ParseStatusException('Отсутствует статус домашней работы')
     verdict = HOMEWORK_VERDICTS[homework_status]
@@ -112,20 +116,25 @@ def main():
     """Основная логика работы бота."""
     check_tokens()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    timestamp = {'from_date': 0}
-    response = get_api_answer(timestamp)
-    homework = check_response(response)
-    message = parse_status(homework)
-    send_message(bot, message)
-    time.sleep(RETRY_PERIOD)
-    timestamp = {'from_date': response['current_date']}
+    timestamp = {'from_date': 1672520400}
+    # response = get_api_answer(timestamp)
+    # homework = check_response(response)
+    # message = parse_status(homework)
+    # send_message(bot, message)
+    # time.sleep(RETRY_PERIOD)
+    # timestamp = {'from_date': response['current_date']}
     while True:
         try:
-            main()
+            response = get_api_answer(timestamp)
+            homework = check_response(response)
+            message = parse_status(homework)
+            send_message(bot, message)
+            timestamp = {'from_date': response['current_date']}
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logging.error(message)
-        break
+        finally:
+            time.sleep(RETRY_PERIOD)
 
 
 if __name__ == '__main__':
