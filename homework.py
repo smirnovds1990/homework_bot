@@ -53,7 +53,7 @@ def check_tokens():
     for token in tokens:
         if not token:
             logging.critical(f'Отсутствует обязательная переменная {token}.')
-            break
+            sys.exit('Отсутствует одна из обязательных переменных.')
 
 
 def send_message(bot, message):
