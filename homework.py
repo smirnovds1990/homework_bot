@@ -82,7 +82,7 @@ def get_api_answer(timestamp):
 
 def check_response(response):
     """Проверь ответ API на соответствие документации."""
-    if type(response) != type(dict):
+    if not isinstance(response, dict):
         raise TypeError('Неправильный формат ответа. Нужен словарь.')
     if 'homeworks' in response.keys():
         homework_info = response['homeworks']
