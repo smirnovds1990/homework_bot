@@ -16,11 +16,6 @@ from exceptions import (
 load_dotenv()
 
 RETRY_PERIOD = 600
-tokens = {
-    'practicum_token': os.getenv('PRACTICUM_TOKEN'),
-    'telegram_token': os.getenv('TELEGRAM_TOKEN'),
-    'telegram_chat_id': os.getenv('TELEGRAM_CHAT_ID')
-}
 PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
@@ -54,9 +49,10 @@ logging.getLogger('').addHandler(handler)
 
 def check_tokens():
     """Проверь наличие обязательных токенов."""
-    for key, value in tokens.items():
-        if not value:
-            logging.critical(f'Отсутствует обязательная переменная {key}.')
+    tokens = [PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]
+    for token in tokens:
+        if not token:
+            logging.critical(f'Отсутствует обязательная переменная {token}.')
             break
 
 
@@ -117,12 +113,6 @@ def main():
     check_tokens()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = {'from_date': 1672520400}
-    # response = get_api_answer(timestamp)
-    # homework = check_response(response)
-    # message = parse_status(homework)
-    # send_message(bot, message)
-    # time.sleep(RETRY_PERIOD)
-    # timestamp = {'from_date': response['current_date']}
     while True:
         try:
             response = get_api_answer(timestamp)
