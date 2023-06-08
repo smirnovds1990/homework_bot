@@ -1,18 +1,18 @@
+from json import JSONDecodeError
 import logging
+from logging import FileHandler, StreamHandler
 import os
 import requests
 import sys
 import time
 import telegram
-from json import JSONDecodeError
-from logging import StreamHandler, FileHandler
 
 from dotenv import load_dotenv
 
 from exceptions import (
-    WrongStatusCodeError,
+    FailedMessageError,
     RequiredVariableEError,
-    FailedMessageError
+    WrongStatusCodeError
 )
 
 
@@ -107,12 +107,12 @@ def check_response(response):
     return homeworks_info
 
 
-def parse_status(homeworks):
+def parse_status(homework):
     """Извлеки статус домашней работы, верни сообщение для отправки."""
-    if 'homework_name' not in homeworks:
+    if 'homework_name' not in homework:
         raise KeyError('Отсутствует ключ "homework_name"')
-    name = homeworks['homework_name']
-    status = homeworks['status']
+    name = homework['homework_name']
+    status = homework['status']
     if status not in HOMEWORK_VERDICTS:
         raise KeyError(f'Отсутствует статус домашней работы "{status}"')
     verdict = HOMEWORK_VERDICTS[status]
@@ -146,8 +146,6 @@ def main():
         else:
             timestamp = {'from_date': response.get('current_date', 0)}
         finally:
-            # print('>>>DONE!')
-            # break
             time.sleep(RETRY_PERIOD)
 
 
