@@ -56,8 +56,7 @@ def send_message(bot, message):
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logging.debug(
-            'Сообщение со статусом домашней работы отправлено',
-            exc_info=True
+            'Сообщение со статусом домашней работы отправлено'
         )
     except FailedMessageError:
         raise FailedMessageError(
@@ -67,11 +66,11 @@ def send_message(bot, message):
 
 def get_api_answer(timestamp):
     """Сделай запрос к API и верни ответ приведенный к данным Python."""
-    # timestamp = {'from_date': 0}
+    timestamp = {'from_date': timestamp}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=timestamp)
     except requests.RequestException as error:
-        raise requests.RequestException(
+        raise ConnectionError(
             f'Ошибка при запросе к API с параметрами:'
             f'{ENDPOINT}, headers={HEADERS}, params={timestamp}: {error}'
         )
@@ -110,10 +109,10 @@ def check_response(response):
 
 def parse_status(homeworks):
     """Извлеки статус домашней работы, верни сообщение для отправки."""
-    if 'homework_name' not in homeworks[0]:
+    if 'homework_name' not in homeworks:
         raise KeyError('Отсутствует ключ "homework_name"')
-    name = homeworks[0]['homework_name']
-    status = homeworks[0]['status']
+    name = homeworks['homework_name']
+    status = homeworks['status']
     if status not in HOMEWORK_VERDICTS:
         raise KeyError(f'Отсутствует статус домашней работы "{status}"')
     verdict = HOMEWORK_VERDICTS[status]
@@ -128,13 +127,13 @@ def main():
         logging.critical(error)
         sys.exit(error)
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    timestamp = {'from_date': 0}
-    # timestamp = int(time.time())
+    timestamp = 0
     while True:
         try:
             response = get_api_answer(timestamp)
             homeworks = check_response(response)
-            message = parse_status(homeworks)
+            last_homework = homeworks[0]
+            message = parse_status(last_homework)
             send_message(bot, message)
         except FailedMessageError as error:
             logging.exception(
