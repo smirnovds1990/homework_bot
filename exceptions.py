@@ -1,16 +1,16 @@
-class WrongStatusCodeException(Exception):
+class WrongStatusCodeError(Exception):
     """Исключение для некорректного статуса при запросе к API."""
 
     pass
 
 
-class ParseStatusException(Exception):
-    """Исключение при отсутствии ключей 'homework_name' и 'status'."""
+class RequiredVariableEError(Exception):
+    """Исключение при отсутствии обязательных токенов."""
 
     pass
 
 
-class NoKeyException(Exception):
-    """Исключение при отсутствии ключа 'homeworks'."""
+class FailedMessageError(Exception):
+    """Исключение при ошибке в отправке сообщения в телеграм."""
 
     pass
