@@ -2,7 +2,6 @@ import logging
 import os
 import sys
 import time
-from json import JSONDecodeError
 from logging import FileHandler, StreamHandler
 
 import requests
