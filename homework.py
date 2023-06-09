@@ -9,7 +9,6 @@ import telegram
 from dotenv import load_dotenv
 
 from exceptions import (
-    FailedMessageError,
     RequiredVariableEError,
     WrongStatusCodeError
 )

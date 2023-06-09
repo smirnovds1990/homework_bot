@@ -8,9 +8,3 @@ class RequiredVariableEError(Exception):
     """Исключение при отсутствии обязательных токенов."""
 
     pass
-
-
-class FailedMessageError(Exception):
-    """Исключение при ошибке в отправке сообщения в телеграм."""
-
-    pass
