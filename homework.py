@@ -1,12 +1,12 @@
-from json import JSONDecodeError
 import logging
-from logging import FileHandler, StreamHandler
 import os
-import requests
 import sys
 import time
-import telegram
+from json import JSONDecodeError
+from logging import FileHandler, StreamHandler
 
+import requests
+import telegram
 from dotenv import load_dotenv
 
 from exceptions import (
@@ -58,7 +58,7 @@ def send_message(bot, message):
         logging.debug(
             'Сообщение со статусом домашней работы отправлено'
         )
-    except FailedMessageError:
+    except Exception:
         raise FailedMessageError(
             'Ошибка отправки сообщения со статусом домашней работы'
         )
@@ -79,13 +79,6 @@ def get_api_answer(timestamp):
             f'Ошибка при запросе к API с параметрами:'
             f'{ENDPOINT}, headers={HEADERS}, params={timestamp}'
         )
-    try:
-        response.json()
-    except JSONDecodeError:
-        raise JSONDecodeError(
-            f'Неожиданный формат ответа при запросе к API с параметрами:'
-            f'{ENDPOINT}, headers={HEADERS}, params={timestamp}'
-        )
     return response.json()
 
 
@@ -96,21 +89,22 @@ def check_response(response):
             f'Неправильный формат ответа. Нужен словарь. '
             f'Получен {type(response)}'
         )
-    if 'homeworks' in response:
-        homeworks_info = response['homeworks']
-    else:
+    if 'homeworks' not in response:
         raise KeyError('Отсутствует ключ "homeworks"')
-    if not isinstance(homeworks_info, list):
+    homeworks = response['homeworks']
+    if not isinstance(homeworks, list):
         raise TypeError(
             f'Неправильный формат ответа. '
-            f'Вместо списка получен {type(homeworks_info)}')
-    return homeworks_info
+            f'Вместо списка получен {type(homeworks)}')
+    return homeworks
 
 
 def parse_status(homework):
     """Извлеки статус домашней работы, верни сообщение для отправки."""
-    if 'homework_name' not in homework:
-        raise KeyError('Отсутствует ключ "homework_name"')
+    required_keys = ['homework_name', 'status']
+    for key in required_keys:
+        if key not in homework:
+            raise KeyError(f'Отсутствует ключ {key}')
     name = homework['homework_name']
     status = homework['status']
     if status not in HOMEWORK_VERDICTS:
@@ -132,10 +126,13 @@ def main():
         try:
             response = get_api_answer(timestamp)
             homeworks = check_response(response)
-            last_homework = homeworks[0]
-            message = parse_status(last_homework)
+            if not homeworks:
+                logging.exception('Список домашних работ пуст.')
+                raise ValueError('Список домашних работ пуст.')
+            homework, *_ = homeworks
+            message = parse_status(homework)
             send_message(bot, message)
-        except FailedMessageError as error:
+        except ConnectionError as error:
             logging.exception(
                 f'Ошибка отправки сообщения со статусом домашней работы: '
                 f'{error}'
@@ -143,6 +140,7 @@ def main():
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logging.exception(message)
+            send_message(bot, message)
         else:
             timestamp = {'from_date': response.get('current_date', 0)}
         finally:
