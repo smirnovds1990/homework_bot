@@ -57,11 +57,11 @@ def send_message(bot, message):
         logging.debug(
             'Сообщение со статусом домашней работы отправлено'
         )
-    except Exception:
-        message = 'Ошибка отправки сообщения со статусом домашней работы.'
-        bot.send_message(TELEGRAM_CHAT_ID, message)
-        logging.exception(message)
-        raise FailedMessageError(message)
+    except Exception as error:
+        logging.exception(
+            f'Ошибка отправки сообщения со статусом домашней работы.'
+            f'{error}'
+        )
 
 
 def get_api_answer(timestamp):
@@ -137,6 +137,7 @@ def main():
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logging.exception(message)
+            send_message(bot, message)
         else:
             timestamp = {'from_date': response.get('current_date', 0)}
         finally:
