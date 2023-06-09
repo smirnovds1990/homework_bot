@@ -58,9 +58,10 @@ def send_message(bot, message):
             'Сообщение со статусом домашней работы отправлено'
         )
     except Exception:
-        raise FailedMessageError(
-            'Ошибка отправки сообщения со статусом домашней работы'
-        )
+        message = 'Ошибка отправки сообщения со статусом домашней работы.'
+        bot.send_message(TELEGRAM_CHAT_ID, message)
+        logging.exception(message)
+        raise FailedMessageError(message)
 
 
 def get_api_answer(timestamp):
@@ -126,20 +127,16 @@ def main():
             response = get_api_answer(timestamp)
             homeworks = check_response(response)
             if not homeworks:
-                logging.exception('Список домашних работ пуст.')
-                raise ValueError('Список домашних работ пуст.')
-            homework, *_ = homeworks
-            message = parse_status(homework)
-            send_message(bot, message)
-        except ConnectionError as error:
-            logging.exception(
-                f'Ошибка отправки сообщения со статусом домашней работы: '
-                f'{error}'
-            )
+                message = 'Список домашних работ пуст.'
+                logging.debug(message)
+                send_message(bot, message)
+            else:
+                homework, *_ = homeworks
+                message = parse_status(homework)
+                send_message(bot, message)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logging.exception(message)
-            send_message(bot, message)
         else:
             timestamp = {'from_date': response.get('current_date', 0)}
         finally:
